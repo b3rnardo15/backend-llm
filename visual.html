@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste do Contexto LLM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .teste-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .resposta {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border-left: 4px solid #007bff;
+        }
+        .erro {
+            background: #ffe7e7;
+            color: #cc0000;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.ok {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.erro {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste do Contexto LLM Backend</h1>
+        
+        <div id="status" class="status">
+            <button onclick="verificarStatus()">🟢 Verificar Status do Servidor</button>
+        </div>
+
+        <div class="teste-section">
+            <h3>🤖 Teste Personalizado</h3>
+            <input type="text" id="perguntaCustom" placeholder="Digite sua pergunta aqui..." />
+            <button onclick="testarCustom()">Perguntar</button>
+            <div id="respostaCustom"></div>
+        </div>
+
+        <div class="teste-section">
+            <h3>🎯 Testes do Contexto Educacional</h3>
+            <p>Clique nos botões para testar se o contexto está funcionando:</p>
+            
+            <button onclick="testar('O que é JavaScript?')">Teste Básico</button>
+            <button onclick="testar('Como criar uma função em Python?')">Teste com Exemplo</button>
+            <button onclick="testar('Explique o que são arrays')">Teste Didático</button>
+            <button onclick="testar('Qual é a capital da França?')">Teste Fora do Contexto</button>
+            
+            <div id="resultado"></div>
+        </div>
+
+        <div class="teste-section">
+            <h3>📊 Avaliação do Contexto</h3>
+            <div id="avaliacao">
+                <p>Execute alguns testes acima para ver a avaliação do contexto.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let testesRealizados = [];
+
+        async function verificarStatus() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="loading">Verificando servidor...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                
+                statusDiv.innerHTML = `
+                    <div class="status ok">
+                        ✅ Servidor funcionando!<br>
+                        <small>Contexto: ${data.contexto}</small>
+                    </div>
+                `;
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="status erro">
+                        ❌ Servidor não está respondendo<br>
+                        <small>Certifique-se de que rodou "npm run dev"</small>
+                    </div>
+                `;
+            }
+        }
+
+        async function testar(pergunta) {
+            const resultadoDiv = document.getElementById('resultado');
+            resultadoDiv.innerHTML = `<div class="loading">🤔 Perguntando: "${pergunta}"...</div>`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/perguntar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pergunta })
+                });
+                
+                const data = await response.json();
+                
+                resultadoDiv.innerHTML = `
+                    <div class="resposta">
+                        <strong>📝 Pergunta:</strong> ${data.pergunta}<br><br>
+                        <strong>🤖 Resposta:</strong><br>${data.resposta}<br><br>
+                        <strong>⏰ Horário:</strong> ${new Date(data.timestamp).toLocaleString()}
+                    </div>
+                `;
+                
+                // Adicionar à avaliação
+                testesRealizados.push({
+                    pergunta: pergunta,
+                    resposta: data.resposta,
+                    timestamp: data.timestamp
+                });
+                
+                avaliarContexto();
+                
+            } catch (error) {
+                resultadoDiv.innerHTML = `
+                    <div class="erro">
+                        ❌ Erro: ${error.message}<br>
+                        Verifique se o servidor está rodando e a API key está configurada.
+                    </div>
+                `;
+            }
+        }
+
+        async function testarCustom() {
+            const pergunta = document.getElementById('perguntaCustom').value;
+            if (!pergunta.trim()) {
+                alert('Digite uma pergunta primeiro!');
+                return;
+            }
+            
+            const resultadoDiv = document.getElementById('respostaCustom');
+            resultadoDiv.innerHTML = `<div class="loading">🤔 Processando sua pergunta...</div>`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/perguntar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pergunta })
+                });
+                
+                const data = await response.json();
+                
+                resultadoDiv.innerHTML = `
+                    <div class="resposta">
+                        <strong>🤖 Resposta:</strong><br>${data.resposta}
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultadoDiv.innerHTML = `
+                    <div class="erro">
+                        ❌ Erro: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function avaliarContexto() {
+            const avaliacaoDiv = document.getElementById('avaliacao');
+            
+            if (testesRealizados.length === 0) return;
+            
+            let pontuacao = 0;
+            let feedback = [];
+            
+            // Analisar as respostas
+            testesRealizados.forEach(teste => {
+                const resposta = teste.resposta.toLowerCase();
+                
+                // Verificar se é didático
+                if (resposta.includes('exemplo') || resposta.includes('vamos ver') || resposta.includes('por exemplo')) {
+                    pontuacao += 10;
+                    feedback.push('✅ Resposta didática com exemplos');
+                }
+                
+                // Verificar se foca em programação
+                if (resposta.includes('código') || resposta.includes('programação') || resposta.includes('javascript') || resposta.includes('python')) {
+                    pontuacao += 10;
+                    feedback.push('✅ Mantém foco em programação');
+                }
+                
+                // Verificar se é educacional
+                if (resposta.includes('aprender') || resposta.includes('entender') || resposta.includes('conceito')) {
+                    pontuacao += 5;
+                    feedback.push('✅ Tom educacional');
+                }
+            });
+            
+            let status = '';
+            if (pontuacao >= 20) {
+                status = '🟢 Contexto funcionando perfeitamente!';
+            } else if (pontuacao >= 10) {
+                status = '🟡 Contexto funcionando parcialmente';
+            } else {
+                status = '🔴 Contexto pode não estar funcionando';
+            }
+            
+            avaliacaoDiv.innerHTML = `
+                <div class="resposta">
+                    <strong>${status}</strong><br>
+                    <strong>Pontuação:</strong> ${pontuacao}/30<br>
+                    <strong>Testes realizados:</strong> ${testesRealizados.length}<br><br>
+                    <strong>Feedback:</strong><br>
+                    ${feedback.join('<br>')}
+                </div>
+            `;
+        }
+
+        // Verificar status automaticamente ao carregar
+        window.onload = verificarStatus;
+    </script>
+</body>
+</html>
